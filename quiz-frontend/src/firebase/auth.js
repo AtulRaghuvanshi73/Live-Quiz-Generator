@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import { auth } from "./firebase";
 import {
   createUserWithEmailAndPassword,
@@ -10,21 +8,40 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
-export const doCreateUserWithEmailAndPassword = async (email, password) => {
-  return createUserWithEmailAndPassword(auth, email, password);
+const db = getFirestore();
+
+const saveUserToFirestore = async (user) => {
+  const userRef = doc(db, "users", user.uid);
+  const userData = {
+    uid: user.uid,
+    email: user.email,
+    displayName: user.displayName || null,
+    photoURL: user.photoURL || null,
+    lastSignIn: new Date().toISOString(),
+  };
+  
+  await setDoc(userRef, userData, { merge: true });
 };
 
-export const doSignInWithEmailAndPassword = (email, password) => {
-  return signInWithEmailAndPassword(auth, email, password);
+export const doCreateUserWithEmailAndPassword = async (email, password) => {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  await saveUserToFirestore(result.user);
+  return result;
+};
+
+export const doSignInWithEmailAndPassword = async (email, password) => {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+  await saveUserToFirestore(result.user);
+  return result;
 };
 
 export const doSignInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
   const result = await signInWithPopup(auth, provider);
-  const user = result.user;
-
-  // add user to firestore
+  await saveUserToFirestore(result.user);
+  return result;
 };
 
 export const doSignOut = () => {
