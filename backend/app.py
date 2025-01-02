@@ -20,15 +20,24 @@ if not API_KEY:
 genai.configure(api_key=API_KEY)
 
 # FastAPI instance
+origins = [
+    "http://localhost:5173",    # Development
+    "http://localhost:3000",    # Alternative development port
+    "http://127.0.0.1:5173",   # Alternative localhost
+    "http://localhost:8000",    # Backend development
+    "http://127.0.0.1:8000",   # Backend alternative
+]
+
 app = FastAPI()
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins, you can specify your frontend URL instead of "*"
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    allow_origin_regex="http://(localhost|127\.0\.0\.1):(5173|8000|3000)"  # Added regex pattern
 )
 
 # Store active connections
@@ -121,6 +130,7 @@ async def join_quiz(join_code: str, participant: QuizParticipant):
 async def websocket_endpoint(websocket: WebSocket, quiz_id: str):
     await manager.connect(websocket, quiz_id)
     try:
+
         while True:
             data = await websocket.receive_json()
             await manager.broadcast(data, quiz_id)
